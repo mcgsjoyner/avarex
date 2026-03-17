@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:universal_io/io.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:avaremp/aircraft/aircraft.dart';
 import 'package:avaremp/aircraft/aircraft_performance.dart';
 import 'package:avaremp/constants.dart';
@@ -311,7 +313,7 @@ class _AircraftPerformanceScreenState extends State<AircraftPerformanceScreen> {
       _customFuelEnduranceController.clear();
       _customSinkRateController.clear();
     }
-    
+
     if (a.hasRawEntries) {
       _customTakeoffEntries = _convertRawToEntries(
         a.rawTakeoffRollEntries ?? [], a.rawTakeoff50ftEntries ?? []);
@@ -1618,6 +1620,15 @@ class _AircraftPerformanceScreenState extends State<AircraftPerformanceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const Tooltip(showDuration: Duration(seconds: 30), triggerMode: TooltipTriggerMode.tap, message: "Import a JSON-formatted performance file.", child: Icon(Icons.info)),
+          TextButton(onPressed: () {
+              _pickFile().then((lines) => setState(() {
+                Map<String, dynamic> decoded = jsonDecode(lines);
+                List<dynamic> list = decoded['cruiseTable'] ?? [];
+                _customCruiseEntries = list.map((e) => _CruiseEntry.fromMap(e)).toList();
+              }));},
+            child: const Text("Import")
+          ),
           // Aircraft Identification Section
           _buildSectionCard(
             'Aircraft Identification',
@@ -2578,4 +2589,18 @@ class _ResultRow {
   final bool bold;
 
   _ResultRow(this.label, this.value, {this.bold = false});
+}
+Future<String> _pickFile() async {
+  String lines = "";
+  // pick a file with txt as extension
+  FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ["json"]);
+  if (result != null) {
+    String? path = result.files.single.path;
+    if(path != null) {
+      File file = File(path);
+      // copy now
+      lines = await file.readAsString();
+    }
+  }
+  return lines;
 }
